@@ -84,15 +84,18 @@ class Driver(object):
         'libusb': ('usb-1.0', 'libusb-1.0')
     }
 
-    def __init__(self, libftdi_search=None):
+    def __init__(self, libftdi_search=None, fixed_path=None):
         """
         :param libftdi_search: force a particular version of libftdi to be used
+        :param fixed_path: a string with the fixed path user for looking for library
         :type libftdi_search: string or sequence of strings
         """
         if libftdi_search is not None:
             self.lib_search['libftdi'] = libftdi_search
+        if fixed_path:
+            self._fixed_path = fixed_path
 
-    def _library_path(self, name, search_list=None):
+    def _library_path(self, name, search_list=None, fixed_path=None):
         """
         find the requested library, return path suitable for CDLL
 
@@ -109,10 +112,10 @@ class Driver(object):
             lib_path = find_library(dll)
             if lib_path is not None:
                 break
-        if lib_path is None:
+        if lib_path is None and fixed_path is None:
             raise LibraryMissingError('{} library not found (search: {})'.format(
                 name, search_list))
-        return lib_path
+        return lib_path if lib_path is not None else fixed_path
 
     @property
     def _libusb(self):
@@ -123,7 +126,7 @@ class Driver(object):
         primarily for diagnostic purposes.
         """
         if self._libusb_dll is None:
-            path = self._library_path('libusb')
+            path = self._library_path('libusb', self._fixed_path)
             self._libusb_dll = CDLL(path)
             self._libusb_dll.libusb_get_version.restype = POINTER(libusb_version_struct)
 
